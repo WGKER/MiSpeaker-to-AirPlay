@@ -9,6 +9,9 @@ on:
 # 注意：这里env必须和on、jobs同级，且缩进为0
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # 👇 在这里定义你自定义的镜像名和标签，只改这里即可
+  IMAGE_NAME: miair
+  IMAGE_TAG: v0.2.1-alpha-arm64
 
 jobs:
   build:
@@ -34,17 +37,13 @@ jobs:
           context: .
           push: false
           platforms: linux/arm64
-          tags: miair:v0.2.1-alpha-arm64
-          outputs: type=docker,dest=miair-arm64.tar
+          tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          outputs: type=docker,dest=${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Zip the tar file
-        run: |
-          zip miair-arm64.zip miair-arm64.tar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: miair-arm64-image
-          path: miair-arm64.zip
+          name: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}-image
+          path: ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar
