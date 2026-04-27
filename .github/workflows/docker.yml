@@ -45,5 +45,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}-image
+          name: ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}-image
           path: ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar
