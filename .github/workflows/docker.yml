@@ -38,12 +38,12 @@ jobs:
           push: false
           platforms: linux/arm64
           tags: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          outputs: type=docker,dest=${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar
+          outputs: type=docker,dest=${{ env.IMAGE_NAME }}_${{ env.IMAGE_TAG }}.tar
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}-image
-          path: ${{ env.IMAGE_NAME }}-${{ env.IMAGE_TAG }}.tar
+          name: ${{ env.IMAGE_NAME }}_${{ env.IMAGE_TAG }}-image
+          path: ${{ env.IMAGE_NAME }}_${{ env.IMAGE_TAG }}.tar
