@@ -1,4 +1,4 @@
-## MiAir - 为不支持DLNA的小爱音箱添加 DLNA 与 AirPlay 1 支持
+## MiAir - 为无 DLNA 的小爱音箱添加 DLNA 与 AirPlay 1 支持
 
 ### 引用以下开源项目代码 由衷感谢
 
@@ -16,13 +16,11 @@
 
 ### 快速开始
 
-### Docker (Thanks @SyunSS)
-
-支持平台：docker arm64
-
-#### 使用Actions打包docker镜像
+#### 一、使用Actions打包docker镜像
 
 点击Actions，选择Build MiAir (arm64 only, download only)，点击运行workflow，开始自动打包生成arm64版docker镜像
+
+#### 二、导入docker镜像，运行容器
 
 下载镜像文件到本地，并存储到主机
 
@@ -35,10 +33,11 @@
 docker run -d \
   --name miair \
   --network=host \
+  -p 8300
   -e MIAIR_HOSTNAME=你的局域网IP \
   -v /mnt/sata1-4/miair/conf:/app/conf \ #你需要存储配置文件的目录
   miair:v0.1.3-alpha-2-arm64
 
-安装完成后访问 `http://容器宿主机IP:8300` 即可打开 Web 管理界面。
-请确保容器网络为Host。\
-部分情况下，修改配置后容器可能无法自动重启，请手动重启容器。
+#### 三、使用MiAir
+
+运行后访问 `http://容器宿主机IP:8300` 即可打开 Web 管理界面，部分情况下，修改配置后容器可能无法自动重启，需手动重启容器
