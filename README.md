@@ -1,6 +1,6 @@
-# MiAir - 为不支持DLNA的小爱音箱添加 DLNA 与 AirPlay 1 支持
+## MiAir - 为不支持DLNA的小爱音箱添加 DLNA 与 AirPlay 1 支持
 
-## 引用以下开源项目代码 由衷感谢
+### 引用以下开源项目代码 由衷感谢
 
 项目文件拷贝自：https://github.com/SyunSS/MiAir/tree/docker
 
@@ -15,13 +15,13 @@
 
 **[XiaoMusic](https://github.com/hanxi/xiaomusic "XiaoMusic")** &ensp; **[AirPlay2 Receiver](https://github.com/openairplay/airplay2-receiver "AirPlay2 Receiver")** &ensp; **[MaCast](https://github.com/xfangfang/Macast "MaCast")**
 
-## 快速开始
+### 快速开始
 
-## Docker (Thanks @SyunSS)
+### Docker (Thanks @SyunSS)
 
 支持平台：Linux / OpenWrt / macOS
 
-### 使用脚本部署
+#### 使用脚本部署
 ```bash
 # 安装 Git
 opkg update
