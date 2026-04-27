@@ -12,31 +12,32 @@
 
 编辑docker.yaml后触发Actions自动打包镜像，或后续需要重新打包Actions中选中后手动打包
 
-
 **[XiaoMusic](https://github.com/hanxi/xiaomusic "XiaoMusic")** &ensp; **[AirPlay2 Receiver](https://github.com/openairplay/airplay2-receiver "AirPlay2 Receiver")** &ensp; **[MaCast](https://github.com/xfangfang/Macast "MaCast")**
 
 ### 快速开始
 
 ### Docker (Thanks @SyunSS)
 
-支持平台：Linux / OpenWrt / macOS
+支持平台：docker arm64
 
-#### 使用脚本部署
-```bash
-# 安装 Git
-opkg update
-opkg install git
-opkg install git-http
+#### 使用Actions打包docker镜像
 
-# 克隆项目
-rm -rf MiAir # 如果是更新，需要清理旧的部署目录
-git clone https://github.com/KiriChen-Wind/MiAir.git
-cd MiAir
+点击Actions，选择Build MiAir (arm64 only, download only)，点击运行workflow，开始自动打包生成arm64版docker镜像
 
-# 赋予权限并运行安装脚本
-chmod +x deploy.sh manage.sh
-./deploy.sh
-```
+下载镜像文件到本地，并存储到主机
+
+主机docker load -i /镜像路径 导入镜像
+
+配置docker容器即可运行
+
+配置参考：
+
+docker run -d \
+  --name miair \
+  --network=host \
+  -e MIAIR_HOSTNAME=你的局域网IP \
+  -v /mnt/sata1-4/miair/conf:/app/conf \ #你需要存储配置文件的目录
+  miair:v0.1.3-alpha-2-arm64
 
 安装完成后访问 `http://容器宿主机IP:8300` 即可打开 Web 管理界面。
 请确保容器网络为Host。\
