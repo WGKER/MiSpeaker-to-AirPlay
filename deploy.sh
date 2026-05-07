@@ -99,53 +99,45 @@ echo -e "${GREEN}[2/8] 获取局域网 IP...${NC}"
 
 # 获取 LAN 口 IP 的函数：按优先级依次尝试各种方式
 get_lan_ip() {
-    local ip=""
+    local ip
 
-    # 1. 优先尝试常见 LAN 桥接口名
-    for iface in br-lan br0 eth0 eth1 lan; do
-        ip=$(ip addr show "$iface" 2>/dev/null \
-             | grep -oP 'inet \K[\d.]+' \
-             | grep -v '^127\.' | head -1)
-        [ -n "$ip" ] && echo "$ip" && return
-    done
+    # 1. 尝试使用 awk 解析默认出网 IP (兼容绝大多数环境，包括 BusyBox/OpenWrt)
+    ip=$(ip -4 route get 8.8.8.8 2>/dev/null | awk '/src/ {for (i=1; i<=NF; i++) if ($i == "src") {print $(i+1); exit}}')
+    [ -n "$ip" ] && echo "$ip" && return
 
-    # 2. 找所有以 br- 开头的桥接口
-    for iface in $(ip link show 2>/dev/null | awk -F': ' '/^[0-9]+: br-/{print $2}'); do
-        ip=$(ip addr show "$iface" 2>/dev/null \
-             | grep -oP 'inet \K[\d.]+' \
-             | grep -v '^127\.' | head -1)
-        [ -n "$ip" ] && echo "$ip" && return
-    done
 
-    # 3. 取默认路由出口接口的 IP
-    local gw_iface
-    gw_iface=$(ip route 2>/dev/null | awk '/^default/{print $5; exit}')
-    if [ -n "$gw_iface" ]; then
-        ip=$(ip addr show "$gw_iface" 2>/dev/null \
-             | grep -oP 'inet \K[\d.]+' \
-             | grep -v '^127\.' | head -1)
+    # 3. 没有默认路由时，兜底取第一个非 lo/docker/tailscale/veth/br-/wg/tun 的 IPv4
+    ip=$(ip -o -4 addr show scope global 2>/dev/null | awk '$2 !~ /^(lo|docker[0-9]*|tailscale[0-9]*|veth.*|br-[a-f0-9]+|wg[0-9]*|tun[0-9]*|tap[0-9]*)$/ {split($4, a, "/"); print a[1]; exit}')
+    [ -n "$ip" ] && echo "$ip" && return
+
+    # 4. 如果 ip 命令不可用，尝试 hostname -I
+    if command -v hostname &> /dev/null; then
+        ip=$(hostname -I 2>/dev/null | awk '{print $1}')
         [ -n "$ip" ] && echo "$ip" && return
     fi
 
-    # 4. 兜底：取第一个非 lo、非 docker 的内网 IP
-    ip=$(ip addr 2>/dev/null \
-         | grep -oP 'inet \K(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[01]))[\d.]+' \
-         | head -1)
-    [ -n "$ip" ] && echo "$ip" && return
-
+    # 兜底
     echo "127.0.0.1"
 }
 
 HOST_IP=$(get_lan_ip)
-if [ "$HOST_IP" = "127.0.0.1" ]; then
-    echo -e "${YELLOW}无法自动检测到有效的局域网 IP，请手动输入：${NC}"
-    read -p "请输入宿主机 IP 地址: " HOST_IP
-    while [ -z "$HOST_IP" ]; do
-        echo -e "${RED}IP 地址不能为空，请重新输入${NC}"
-        read -p "请输入宿主机 IP 地址: " HOST_IP
+
+if [ -z "$HOST_IP" ] || [ "$HOST_IP" = "127.0.0.1" ]; then
+    echo -e "${YELLOW}警告: 无法自动获取到有效的局域网 IP。${NC}"
+    read -p "请输入宿主机的局域网 IP 地址: " HOST_IP
+    while [ -z "$HOST_IP" ] || [ "$HOST_IP" = "127.0.0.1" ]; do
+        echo -e "${RED}IP 地址无效，请重新输入${NC}"
+        read -p "请输入宿主机的局域网 IP 地址: " HOST_IP
     done
+else
+    echo -e "${GREEN}获取到的局域网 IP 地址: ${YELLOW}$HOST_IP${NC}"
+    echo "这个局域网 IP 地址是正确的吗？"
+    read -p "如果此局域网 IP 地址正确，请按下回车以确认使用。否则请输入正确的局域网 IP 地址并按下回车： " USER_IP
+    if [ -n "$USER_IP" ]; then
+        HOST_IP="$USER_IP"
+    fi
 fi
-echo -e "${GREEN}✓ 宿主机 IP: $HOST_IP${NC}"
+echo -e "${GREEN}✓ 最终确认宿主机 IP: $HOST_IP${NC}"
 
 # ============================================
 # 步骤 3: 检查并下载 MiAir 代码
@@ -337,8 +329,8 @@ if [ $? -eq 0 ]; then
     fi
 
     echo -e "配置文件目录: ${GREEN}$CONFIG_DIR${NC}"
-    echo -e "Web 管理界面: ${GREEN}YourHostIP:8300${NC}"
-    echo -e "DLNA 端口: ${GREEN}8200${NC}"
+    echo -e "Web 管理界面: ${GREEN}http://$HOST_IP:8300${NC}"
+    echo -e "DLNA 服务端口: ${GREEN}8200${NC}"
     echo ""
     echo "查看日志命令:"
     echo "  docker logs -f miair"
