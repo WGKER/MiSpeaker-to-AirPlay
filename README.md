@@ -2,11 +2,11 @@
 
 ### 引用以下开源项目代码 由衷感谢
 
-项目文件拷贝自：https://github.com/SyunSS/MiAir/tree/docker
+项目文件拷贝自：[https://github.com/SyunSS/MiAir/tree/docker](https://github.com/KiriChen-Wind/MiAir)
 
-拷贝日期：2026-04-27
+拷贝日期：2026-05-07
 
-拷贝版本：v0.2.1-alpha
+拷贝版本：v0.3.7-alpha
 
 自修改workflows镜像打包脚本，docker.yaml，只打包适配arm64的docker镜像
 
