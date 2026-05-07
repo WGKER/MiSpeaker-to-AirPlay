@@ -2,7 +2,7 @@
 
 ### 引用以下开源项目代码 由衷感谢
 
-项目文件拷贝自：[https://github.com/SyunSS/MiAir/tree/docker](https://github.com/KiriChen-Wind/MiAir)
+项目文件拷贝自：https://github.com/KiriChen-Wind/MiAir
 
 拷贝日期：2026-05-07
 
