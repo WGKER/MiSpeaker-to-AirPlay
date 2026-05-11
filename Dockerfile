@@ -1,12 +1,15 @@
 FROM python:3.12-slim
-
 LABEL maintainer="MiAir"
 LABEL description="DLNA/AirPlay receiver for Xiaomi AI Speaker"
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libportaudio2 \
     dnsutils \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -20,5 +23,4 @@ COPY miair/ ./miair/
 RUN mkdir -p /app/conf
 
 EXPOSE 8200 8300
-
 ENTRYPOINT ["python", "miair.py", "--conf-path", "/app/conf"]
