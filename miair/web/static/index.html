@@ -1054,7 +1054,7 @@
         </div>
 
         <div style="text-align: center; margin-top: 40px; color: var(--text-muted); font-size: 12px;">
-            MiAir v<span id="version-text">BUILD_VERSION</span> by WGKER
+            MiAir <span id="version-text">BUILD_VERSION</span> by WGKER
         </div>
     </div>
 
@@ -1117,8 +1117,7 @@
                 updateStatusBar(data);
 
                 if (data.version) {
-                    document.getElementById('version-text').textContent = 'V' + data.version;
-                    }
+                    document.getElementById('version-text').textContent = 'v' + data.version;
                 }
 
                 if (!initialLoaded) {
