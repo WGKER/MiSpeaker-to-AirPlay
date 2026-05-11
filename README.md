@@ -25,6 +25,12 @@
 
 2026-05-11
 
+版本：miair_v0.3.9-alpha-arm64
+
+更新：
+
+      优化docker镜像大小
+
 版本：miair_v0.3.8-alpha-arm64
 
 更新：
