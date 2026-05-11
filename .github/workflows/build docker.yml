@@ -13,7 +13,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # 👇 在这里定义你自定义的镜像名和标签，只改这里即可，后面会自动引用变量
   IMAGE_NAME: miair
-  IMAGE_TAG: v0.3.9.1-alpha-arm64
+  IMAGE_TAG: v0.3.9-alpha-arm64
 
 jobs:
   build:
@@ -24,6 +24,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        
+      - name: Inject version into index.html
+        run: |
+          # 去掉 IMAGE_TAG 开头的 v，只保留数字部分（可选，看你想怎么显示）
+          # VERSION_NO_V=${IMAGE_TAG#v}
+          # 替换 index.html 里的占位符 BUILD_VERSION 为实际版本号
+          # 注意：这里的路径要和你项目里的 index.html 位置一致
+          sed -i "s/BUILD_VERSION/${IMAGE_TAG}/g" miair/web/static/index.html
 
       - name: Docker mirror config
         run: |
