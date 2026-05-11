@@ -47,6 +47,8 @@ NEED_USE_PLAY_MUSIC_API = [
     "OH2",
     "OH2P",
     "X6A",
+    "L05C",
+    "LX06",
 ]
 
 # 默认 audio_id (用于 play_by_music_url)
