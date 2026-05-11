@@ -31,7 +31,7 @@ jobs:
           # VERSION_NO_V=${IMAGE_TAG#v}
           # 替换 index.html 里的占位符 BUILD_VERSION 为实际版本号
           # 注意：这里的路径要和你项目里的 index.html 位置一致
-          sed -i "s/BUILD_VERSION/${IMAGE_TAG}/g" miair/web/static/index.html
+          sed -i 's/BUILD_VERSION/'"${IMAGE_TAG}"'/g' miair/web/static/index.html
 
       - name: Docker mirror config
         run: |
