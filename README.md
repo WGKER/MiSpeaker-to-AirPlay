@@ -1,43 +1,46 @@
-## MiAir - 为无 DLNA 的小爱音箱添加 DLNA 与 AirPlay 1 支持
+## MiAir - 为小爱音箱添加 DLNA 与 AirPlay 1
 
-### 引用以下开源项目代码 由衷感谢
-
-项目文件拷贝自：https://github.com/KiriChen-Wind/MiAir
-
-拷贝日期：2026-05-07
-
-拷贝版本：v0.3.7-alpha
-
-自修改workflows镜像打包脚本，docker.yaml，只打包适配arm64的docker镜像
-
-编辑docker.yaml后触发Actions自动打包镜像，或后续需要重新打包Actions中选中后手动打包
-
+### 引用项目
+**[MiAir](https://github.com/KiriChen-Wind/MiAir_"MiAir")**
 **[XiaoMusic](https://github.com/hanxi/xiaomusic "XiaoMusic")** &ensp; **[AirPlay2 Receiver](https://github.com/openairplay/airplay2-receiver "AirPlay2 Receiver")** &ensp; **[MaCast](https://github.com/xfangfang/Macast "MaCast")**
+
+### 自用声明
+
+本项目为MiAir的纯arm64 docker版，仅自用，非盈利，不对外负责
 
 ### 快速开始
 
-#### 一、使用Actions打包docker镜像
+#### 一、打包镜像
 
-点击Actions，选择Build MiAir (arm64 only, download only)，点击运行workflow，开始自动打包生成arm64版docker镜像
+打包arm64版docker镜像
 
-#### 二、导入docker镜像，运行容器
+#### 二、运行容器
 
-下载镜像文件到本地，并存储到主机
-
-主机docker load -i /镜像路径 导入镜像
-
-配置docker容器即可运行
-
-配置参考：
-
-docker run -d \
-  --name miair \
-  --network=host \
-  -p 8300
-  -e MIAIR_HOSTNAME=你的局域网IP \
-  -v /mnt/sata1-4/miair/conf:/app/conf \ #你需要存储配置文件的目录
-  miair:v0.1.3-alpha-2-arm64
+下载镜像文件，配置运行docker容器
 
 #### 三、使用MiAir
 
-运行后访问 `http://容器宿主机IP:8300` 即可打开 Web 管理界面，部分情况下，修改配置后容器可能无法自动重启，需手动重启容器
+访问 `http://容器宿主机IP:8300`  Web 管理界面，部分情况下，修改配置后容器可能无法自动重启，需手动重启容器
+
+### 更细日志
+2026-05-11
+版本：miair_v0.3.8-alpha-arm64
+更新：优化隔空播放时，米家app音箱界面错误匹配音乐id，显示不相关音乐信息及封面，现已修复为不显示
+
+2026-05-07
+版本：miair_v0.3.7-alpha-arm64
+更新：
+      修复部分老旧型号设备无法暂停播放的问题。
+      修复部分设备曲目切换时音量被错误调节的问题。
+      新增自动检查更新功能。
+      优化了部分代码逻辑，减小了资源占用，增强了稳定性。
+
+2026-05-03
+版本：miair_v0.3.1-alpha-arm64
+更新：
+      重构 WebUI。
+      新增 默认音量级别 功能。
+      新增 故障自动应对 功能，可在遇到故障时自动重新启动。
+      修复部分设备暂停播放后，语音唤醒后仍会继续播放的bug。
+      修复部分设备调整音乐进度时，时间存在偏差的bug。
+      优化了部分代码逻辑，减小了资源占用，增强了稳定性。
