@@ -2,6 +2,8 @@ name: Build MiAir (arm64 only, download only)
 
 on:
   push:
+    paths: 
+      - '.github/workflows/**'
     branches:
       - docker
   workflow_dispatch:
