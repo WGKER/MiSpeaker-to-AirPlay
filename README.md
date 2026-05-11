@@ -1,8 +1,7 @@
 ## MiAir - 为小爱音箱添加 DLNA 与 AirPlay 1
 
 ### 引用项目
-**[MiAir](https://github.com/KiriChen-Wind/MiAir_"MiAir")**
-**[XiaoMusic](https://github.com/hanxi/xiaomusic "XiaoMusic")** &ensp; **[AirPlay2 Receiver](https://github.com/openairplay/airplay2-receiver "AirPlay2 Receiver")** &ensp; **[MaCast](https://github.com/xfangfang/Macast "MaCast")**
+**[MiAir](https://github.com/KiriChen-Wind/MiAir_"MiAir")** &ensp; **[XiaoMusic](https://github.com/hanxi/xiaomusic "XiaoMusic")** &ensp; **[AirPlay2 Receiver](https://github.com/openairplay/airplay2-receiver "AirPlay2 Receiver")** &ensp; **[MaCast](https://github.com/xfangfang/Macast "MaCast")**
 
 ### 自用声明
 
