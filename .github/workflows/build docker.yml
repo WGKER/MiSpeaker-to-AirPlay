@@ -27,11 +27,9 @@ jobs:
         
       - name: Inject version into index.html
         run: |
-          # 去掉 IMAGE_TAG 开头的 v，只保留数字部分（可选，看你想怎么显示）
-          # VERSION_NO_V=${IMAGE_TAG#v}
-          # 替换 index.html 里的占位符 BUILD_VERSION 为实际版本号
-          # 注意：这里的路径要和你项目里的 index.html 位置一致
+          ls -la miair/web/static/
           sed -i "s|BUILD_VERSION|${{ env.IMAGE_TAG }}|g" miair/web/static/index.html
+          cat miair/web/static/index.html | grep "MiAir"
 
       - name: Docker mirror config
         run: |
@@ -51,6 +49,7 @@ jobs:
           outputs: type=docker,dest=${{ env.IMAGE_NAME }}_${{ env.IMAGE_TAG }}.tar
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          load: false
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
