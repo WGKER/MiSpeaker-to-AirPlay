@@ -25,7 +25,7 @@
 
 2026-05-12
 
-版本：miair_V0.3.9-Alpha-Arm64
+版本：miair_v0.3.9-alpha-arm64
 
 更新：
 
