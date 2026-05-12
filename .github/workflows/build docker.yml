@@ -27,7 +27,6 @@ jobs:
         
       - name: Inject version into index.html
         run: |
-          ls -la miair/web/static/
           sed -i "s|BUILD_VERSION|${{ env.IMAGE_TAG }}|g" miair/web/static/index.html
           cat miair/web/static/index.html | grep "MiAir"
 
