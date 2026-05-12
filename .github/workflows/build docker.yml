@@ -13,7 +13,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # 👇 在这里定义你自定义的镜像名和标签，只改这里即可，后面会自动引用变量
   IMAGE_NAME: miair
-  IMAGE_TAG: V0.3.9-Alpha-Arm64
+  IMAGE_TAG: v0.3.9-alpha-arm64
 
 jobs:
   build:
