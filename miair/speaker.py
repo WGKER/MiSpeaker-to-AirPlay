@@ -1,5 +1,6 @@
 """小爱音箱控制模块"""
 
+import asyncio
 import json
 import logging
 
@@ -13,10 +14,27 @@ log = logging.getLogger("miair")
 class SpeakerController:
     """单个小爱音箱的控制接口"""
 
+    # 连续登录失败计数（所有实例共享，因为登录状态是全局的）
+    _consecutive_login_failures: int = 0
+    _LOGIN_FAILURE_RESTART_THRESHOLD = 6  # 连续失败 6 次后触发重启
+
     def __init__(self, speaker: Speaker, auth: AuthManager):
         self.speaker = speaker
         self.auth = auth
         self._last_volume: int = 50  # 用于 unmute 恢复
+
+    @classmethod
+    def _check_and_trigger_restart(cls):
+        """检查连续登录失败次数，达到阈值时触发进程重启"""
+        if cls._consecutive_login_failures >= cls._LOGIN_FAILURE_RESTART_THRESHOLD:
+            log.error(
+                f"连续 {cls._consecutive_login_failures} 次登录失败，正在重启程序以恢复服务..."
+            )
+            from miair.web.api import _restart_process
+            try:
+                asyncio.get_running_loop().call_soon(_restart_process)
+            except RuntimeError:
+                _restart_process()
 
     @property
     def device_id(self) -> str:
@@ -109,7 +127,7 @@ class SpeakerController:
             # 某些型号的小爱音箱在 stop 后仍会残留缓存，
             # 连续调用 stop + pause 可以更彻底地清空播放状态。
             ret = await self.auth.mina_service.player_stop(self.device_id)
-            await self.pause() 
+            await self.pause()
             log.info(f"player_stop device_id={self.device_id} ret={ret}")
             return True
         except Exception as e:
@@ -128,6 +146,8 @@ class SpeakerController:
                     return True
                 except Exception as e2:
                     log.error(f"重新登录后 stop 仍然失败: {e2}")
+                    SpeakerController._consecutive_login_failures += 1
+                    SpeakerController._check_and_trigger_restart()
                     return False
             return False
 
@@ -218,6 +238,8 @@ class SpeakerController:
                 raise Exception(f"Mina API response missing 'info': {playing_info}")
                 
             info = json.loads(info_str)
+            # 获取成功，重置连续登录失败计数
+            SpeakerController._consecutive_login_failures = 0
             return {
                 "status": info.get("status", 0),
                 "volume": int(info.get("volume", 0)),
@@ -242,12 +264,16 @@ class SpeakerController:
                     if not info_str:
                         raise Exception(f"Mina API response missing 'info': {playing_info}")
                     info = json.loads(info_str)
+                    # 重试成功，重置计数
+                    SpeakerController._consecutive_login_failures = 0
                     return {
                         "status": info.get("status", 0),
                         "volume": int(info.get("volume", 0)),
                     }
                 except Exception as e2:
                     log.error(f"重新登录后 get_status 仍然失败: {e2}")
+                    SpeakerController._consecutive_login_failures += 1
+                    SpeakerController._check_and_trigger_restart()
             # 向上抛出异常，让调用者（如 DeviceServer 的轮询任务）捕获并忽略本次轮询
             raise Exception(f"get_status 失败: {e}")
 
