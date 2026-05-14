@@ -67,6 +67,8 @@ class DeviceServer:
         self._resume_tasks: dict[str, asyncio.Task] = {}  # udn -> resume task
         # 追踪活跃的代理任务，用于强制中止
         self._active_proxy_tasks: dict[str, set[asyncio.Task]] = {} # udn -> set of tasks
+        # 暂停中屏蔽集合：暂停时加入，播放/停止时移除，阻止音箱重连拉取音频
+        self._paused_proxy_udns: set[str] = set()
         # 周期性缓冲清理任务
         self._buffer_cleanup_task: asyncio.Task | None = None
         # 内存上限: 缓冲总大小不超过 200MB
@@ -131,6 +133,7 @@ class DeviceServer:
         renderer.seek_url_func = self.create_seek_url
         renderer.pre_buffer_func = self.start_buffering
         renderer.abort_proxy_func = self.abort_proxy_for_renderer
+        renderer.resume_proxy_func = self.resume_proxy_for_renderer
 
     # ---- 音频缓冲/代理系统 ----
 
@@ -677,7 +680,8 @@ class DeviceServer:
             pass
 
     def abort_proxy_for_renderer(self, udn: str):
-        """立即中止指定渲染器的所有活跃代理连接"""
+        """立即中止指定渲染器的所有活跃代理连接，并屏蔽后续重连请求"""
+        self._paused_proxy_udns.add(udn)
         tasks = self._active_proxy_tasks.get(udn)
         if tasks:
             log.info(f"[{udn}] 正在中止 {len(tasks)} 个活跃的媒体代理连接...")
@@ -685,6 +689,10 @@ class DeviceServer:
                 if not task.done():
                     task.cancel()
             tasks.clear()
+
+    def resume_proxy_for_renderer(self, udn: str):
+        """恢复渲染器的代理访问（播放/停止时调用）"""
+        self._paused_proxy_udns.discard(udn)
 
     async def _handle_media_proxy(self, request: web.Request) -> web.StreamResponse:
         """媒体代理处理器 - 从内存缓冲提供音频，支持 Range/Seek"""
@@ -695,6 +703,12 @@ class DeviceServer:
             return web.Response(status=404, text="Not Found")
 
         buffer_id, base_offset, udn = entry
+
+        # 暂停中的渲染器，拒绝代理请求（防止音箱重连拉取音频）
+        if udn and udn in self._paused_proxy_udns:
+            log.info(f"[{udn}] 暂停中，拒绝代理请求")
+            return web.Response(status=403, text="Paused")
+
         buf = self._media_buffers.get(buffer_id)
         if not buf:
             log.warning(f"代理请求缓冲不存在: {buffer_id}")
