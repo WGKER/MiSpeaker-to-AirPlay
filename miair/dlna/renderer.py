@@ -56,6 +56,8 @@ class DLNARenderer:
         self.pre_buffer_func = None
         # 代理中止回调 (由 DeviceServer 注入，替代双向引用)
         self.abort_proxy_func: Callable[[str], None] | None = None
+        # 代理恢复回调 (由 DeviceServer 注入，暂停后恢复代理访问)
+        self.resume_proxy_func: Callable[[str], None] | None = None
 
         # 位置追踪 (基于定时器的近似值)
         self._play_start_time: float = 0.0
@@ -154,6 +156,10 @@ class DLNARenderer:
 
     async def play(self) -> bool:
         """开始播放 (DLNA Play)"""
+        # 恢复代理访问（暂停时会屏蔽，此处解除以便音箱重新拉取音频）
+        if self.resume_proxy_func:
+            self.resume_proxy_func(self.udn)
+
         needs_transcode = self._needs_transcode()
         play_url = None
 
@@ -253,6 +259,11 @@ class DLNARenderer:
 
     async def pause(self) -> bool:
         """暂停播放 (DLNA Pause)"""
+        # 中止媒体代理连接，让音箱失去音频源后停止播放
+        # 解决部分型号（如 L05C）通过 MiNA API 发送 stop/pause 无效的问题
+        if self.abort_proxy_func:
+            self.abort_proxy_func(self.udn)
+
         async with self._lock:
             if not self.speaker:
                 self.transport_state = TRANSPORT_STATE_PAUSED
@@ -280,7 +291,11 @@ class DLNARenderer:
         # 立即中止所有活跃的媒体代理连接，防止音箱在断开后播放缓存残余
         if self.abort_proxy_func:
             self.abort_proxy_func(self.udn)
-            
+
+        # 停止后解除暂停屏蔽（暂停时会加入屏蔽集合）
+        if self.resume_proxy_func:
+            self.resume_proxy_func(self.udn)
+
         async with self._lock:
             if not self.speaker:
                 self.transport_state = TRANSPORT_STATE_STOPPED
