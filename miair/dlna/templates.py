@@ -32,6 +32,7 @@ def device_description_xml(udn: str, friendly_name: str, base_url: str) -> str:
     <UDN>uuid:{udn}</UDN>
     <dlna:X_DLNADOC>DMR-1.50</dlna:X_DLNADOC>
     <dlna:X_DLNACAP>audio-only</dlna:X_DLNACAP>
+    <qq:X_QPlay_SoftwareCapability xmlns:qq="http://www.tencent.com">QPlay:2</qq:X_QPlay_SoftwareCapability>
     <serviceList>
       <service>
         <serviceType>{AVTRANSPORT_URN}</serviceType>
