@@ -20,8 +20,8 @@ log = logging.getLogger("miair")
 
 # --- 队列参数 ---
 # 每个 ALAC 包约 8ms (352 samples @ 44100Hz)
-# 20 个包 ≈ 160ms 的缓冲上限
-_QUEUE_MAXSIZE = 20
+# 100 个包 ≈ 800ms 的缓冲上限，兼顾低延迟与抗 WiFi 抖动
+_QUEUE_MAXSIZE = 100
 
 
 class AudioStreamServer:
@@ -112,15 +112,19 @@ class AudioStreamServer:
         log.info("音频流: 停止接收 PCM 数据")
 
     def write_pcm(self, data: bytes):
-        """写入 PCM 音频数据 — 非阻塞，队列满时丢弃旧数据"""
+        """写入 PCM 音频数据 — 非阻塞，队列满时批量丢弃旧数据腾出空间"""
         if not self._active:
             return
         try:
             self._audio_queue.put_nowait(data)
         except queue.Full:
-            # 丢弃最旧数据，保证新数据优先 (降低延迟)
+            # 批量丢弃旧数据，一次性腾出足够空间，避免反复 put/get 开销
+            dropped = 0
+            target = _QUEUE_MAXSIZE // 4  # 丢弃 25% 腾出充裕空间
             try:
-                self._audio_queue.get_nowait()
+                for _ in range(target):
+                    self._audio_queue.get_nowait()
+                    dropped += 1
             except queue.Empty:
                 pass
             try:
@@ -193,18 +197,18 @@ class AudioStreamServer:
                         chunk = self._audio_queue.get(timeout=0.02)
                         if chunk is None:
                             break
-                        with data_lock:
-                            pending_data.append(chunk)
-                        # 批量读取更多数据 (减少唤醒次数)
-                        for _ in range(11):
+                        # 本地批量收集，避免每个 chunk 都加锁
+                        local_batch = [chunk]
+                        for _ in range(31):
                             try:
                                 extra = self._audio_queue.get_nowait()
                                 if extra is None:
                                     break
-                                with data_lock:
-                                    pending_data.append(extra)
+                                local_batch.append(extra)
                             except queue.Empty:
                                 break
+                        with data_lock:
+                            pending_data.extend(local_batch)
                         loop.call_soon_threadsafe(data_ready.set)
                         empty_streak = 0
                     except queue.Empty:
@@ -217,7 +221,7 @@ class AudioStreamServer:
                             loop.call_soon_threadsafe(data_ready.set)
                         continue
             except Exception as e:
-                pass
+                log.error(f"WAV reader 异常: {e}")
             finally:
                 writer_done = True
                 loop.call_soon_threadsafe(data_ready.set)
@@ -233,8 +237,8 @@ class AudioStreamServer:
                 await data_ready.wait()
                 data_ready.clear()
                 with data_lock:
-                    chunks = pending_data[:]
-                    pending_data.clear()
+                    chunks = pending_data
+                    pending_data = []
                 if chunks:
                     # 批量写入：合并所有 chunk 一次性写出
                     await response.write(b"".join(chunks))
@@ -348,16 +352,18 @@ class AudioStreamServer:
                         chunk = self._audio_queue.get(timeout=0.05)
                         if chunk is None:
                             break
-                        proc.stdin.write(chunk)
-                        # 批量喂数据
-                        for _ in range(4):
+                        # 批量收集数据后一次性写入，减少 write 系统调用次数
+                        chunks = [chunk]
+                        for _ in range(15):
                             try:
                                 extra = self._audio_queue.get_nowait()
                                 if extra is None:
-                                    break
-                                proc.stdin.write(extra)
+                                    proc.stdin.close()
+                                    return
+                                chunks.append(extra)
                             except queue.Empty:
                                 break
+                        proc.stdin.write(b"".join(chunks))
                         empty_streak = 0
                     except queue.Empty:
                         empty_streak += 1
@@ -383,7 +389,7 @@ class AudioStreamServer:
         # 从 ffmpeg stdout 读取并写给客户端
         try:
             while self._active and not self._abort:
-                audio_data = await asyncio.to_thread(proc.stdout.read, 1024)
+                audio_data = await asyncio.to_thread(proc.stdout.read, 8192)
                 if not audio_data or self._abort:
                     break
                 await response.write(audio_data)
