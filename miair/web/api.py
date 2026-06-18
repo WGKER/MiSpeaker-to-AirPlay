@@ -1,21 +1,13 @@
 """Web 管理界面 API"""
-
 import json
 import logging
 import os
 import sys
-
 from aiohttp import web
-
 import asyncio
-
 from miair.config import Config
 from miair.const import VERSION
-
-
 log = logging.getLogger("miair")
-
-
 def _is_docker():
     """检测是否在 Docker 容器中运行"""
     # 1. 环境变量显式指定（最可靠）
@@ -39,7 +31,6 @@ def _is_docker():
     except Exception:
         pass
     return False
-
 def _restart_process():
     """重启当前 Python 进程"""
     log.info(f"重启进程: {sys.executable} {sys.argv}")
@@ -58,12 +49,9 @@ def _restart_process():
         os._exit(0)
     else:
         os.execv(sys.executable, [sys.executable] + sys.argv)
-
-
 def create_web_app(config: Config, app_instance) -> web.Application:
     """创建 Web 管理应用"""
     web_app = web.Application()
-
     async def handle_index(request):
         """主页"""
         import os
@@ -72,11 +60,9 @@ def create_web_app(config: Config, app_instance) -> web.Application:
         if os.path.exists(index_path):
             return web.FileResponse(index_path)
         return web.Response(text="MiAir Web UI", content_type="text/html")
-
     async def handle_get_setting(request):
         """获取当前设置和设备列表 (类似 xiaomusic /getsetting)"""
         need_device_list = request.query.get("need_device_list", "false") == "true"
-
         data = {
             "version": VERSION,
             "hostname": config.hostname,
@@ -96,7 +82,6 @@ def create_web_app(config: Config, app_instance) -> web.Application:
             "follow_device_volume": config.follow_device_volume,
             "auto_restart": config.auto_restart,
         }
-
         # 返回已配置的 speakers 信息
         speakers_info = {}
         for did in config.get_did_list():
@@ -107,19 +92,18 @@ def create_web_app(config: Config, app_instance) -> web.Application:
                 "dlna_name": speaker.get_dlna_name(),
                 "hardware": speaker.hardware,
                 "enabled": speaker.enabled,
+                "compatibility_mode": speaker.is_compatibility_mode(),
             }
         data["speakers"] = speakers_info
-
+        from miair.const import NEED_USE_PLAY_MUSIC_API
+        data["need_use_play_music_api"] = NEED_USE_PLAY_MUSIC_API
         if need_device_list:
             device_list = await app_instance.get_all_devices()
             data["device_list"] = device_list
-
         return web.json_response(data)
-
     async def handle_save_setting(request):
         """保存设置 (账号、密码、cookie、选中的设备)"""
         data = await request.json()
-
         # 更新账号信息
         if "account" in data:
             config.account = data["account"]
@@ -127,21 +111,17 @@ def create_web_app(config: Config, app_instance) -> web.Application:
             config.password = data["password"]
         if "cookie" in data:
             config.cookie = data["cookie"]
-
         # 更新设备选择
         if "mi_did" in data:
             config.mi_did = data["mi_did"]
-
         # 更新其他配置
         if "auto_play_on_set_uri" in data:
             config.auto_play_on_set_uri = data["auto_play_on_set_uri"]
-
         # 更新端口配置
         if "dlna_port" in data:
             config.dlna_port = data["dlna_port"]
         if "web_port" in data:
             config.web_port = data["web_port"]
-
         # 更新实验性功能配置
         if "auto_resume_on_interrupt" in data:
             config.auto_resume_on_interrupt = data["auto_resume_on_interrupt"]
@@ -153,33 +133,29 @@ def create_web_app(config: Config, app_instance) -> web.Application:
             config.follow_device_volume = data["follow_device_volume"]
         if "auto_restart" in data:
             config.auto_restart = data["auto_restart"]
-
-        # 更新 speaker 名称
+        # 更新 speaker 名称和兼容模式
         if "speakers" in data:
             for did, speaker_data in data["speakers"].items():
                 speaker = config.get_speaker(did)
                 if "dlna_name" in speaker_data:
                     speaker.dlna_name = speaker_data["dlna_name"]
-
+                if "compatibility_mode" in speaker_data:
+                    speaker.compatibility_mode = speaker_data["compatibility_mode"]
         config.save()
-
         # 先返回响应，然后重启进程
         resp = web.json_response({"ok": True, "message": "配置已保存，正在重启..."})
         await resp.prepare(request)
         await resp.write_eof()
-
         # 安排进程重启
         log.info("配置已保存，正在重启进程...")
         asyncio.get_running_loop().call_soon(_restart_process)
         return resp
-
     async def handle_get_devices(request):
         """获取小米账号下所有设备列表"""
         if not config.cookie:
             return web.json_response(
                 {"error": "请先配置 Cookie"}, status=400
             )
-
         try:
             devices = await app_instance.get_all_devices()
             if not devices and not app_instance.auth.is_logged_in():
@@ -192,7 +168,6 @@ def create_web_app(config: Config, app_instance) -> web.Application:
             return web.json_response(
                 {"error": f"获取设备列表失败: {e}"}, status=500
             )
-
     async def handle_get_speakers(request):
         """获取当前运行中的渲染器状态"""
         speakers_info = []
@@ -212,7 +187,6 @@ def create_web_app(config: Config, app_instance) -> web.Application:
                     if sap.airplay_server.is_playing:
                         airplay_active = True
                         airplay_client = sap.airplay_server.client_name
-
             speakers_info.append({
                 "did": did,
                 "name": speaker.name,
@@ -226,7 +200,6 @@ def create_web_app(config: Config, app_instance) -> web.Application:
                 "airplay_client": airplay_client,
             })
         return web.json_response(speakers_info)
-
     async def handle_rename_speaker(request):
         """重命名音箱的 DLNA 名称"""
         did = request.match_info["did"]
@@ -234,7 +207,6 @@ def create_web_app(config: Config, app_instance) -> web.Application:
         new_name = data.get("dlna_name", "")
         if not new_name:
             return web.json_response({"error": "名称不能为空"}, status=400)
-
         speaker = config.get_speaker(did)
         speaker.dlna_name = new_name
         config.save()
@@ -247,7 +219,6 @@ def create_web_app(config: Config, app_instance) -> web.Application:
                 break
         
         return web.json_response({"ok": True, "dlna_name": new_name})
-
     async def handle_status(request):
         """系统状态"""
         return web.json_response({
@@ -258,7 +229,6 @@ def create_web_app(config: Config, app_instance) -> web.Application:
             "dlna_port": config.dlna_port,
             "web_port": config.web_port,
         })
-
     # 注册路由
     web_app.router.add_get("/", handle_index)
     web_app.router.add_get("/api/setting", handle_get_setting)
@@ -267,11 +237,9 @@ def create_web_app(config: Config, app_instance) -> web.Application:
     web_app.router.add_get("/api/speakers", handle_get_speakers)
     web_app.router.add_post("/api/speakers/{did}/rename", handle_rename_speaker)
     web_app.router.add_get("/api/status", handle_status)
-
     # 静态文件
     import os
     static_dir = os.path.join(os.path.dirname(__file__), "static")
     if os.path.exists(static_dir):
         web_app.router.add_static("/static", static_dir)
-
     return web_app
