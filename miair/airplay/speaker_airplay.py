@@ -93,7 +93,7 @@ class SpeakerAirPlay:
             self._play_grace_until = time.time() + 10.0  # 10秒宽限期
             success = await self.controller.play_url(stream_url)
             if success:
-                log.info(f"AirPlay 音频已在 {self.device_name} 开始播放")
+                log.info(f"AirPlay 音频已在 {self.device_name} 开始播放: {stream_url}")
                 self._start_poll()
                 if self.config:
                     default_vol = getattr(self.config, 'default_volume', 0)
@@ -119,12 +119,19 @@ class SpeakerAirPlay:
 
     @staticmethod
     def _vol_pct_to_db(volume: int) -> float:
+        """音箱百分比 → AirPlay dB 值（线性映射逆运算）
+
+        iOS 步骤 1-16 线性映射: -28.125 dB ~ 0 dB → 音箱 6% ~ 100%
+        逆向: dB = (volume - 6) / 94 * 28.125 - 28.125
+        """
         import math
         if volume <= 0:
             return -144.0
         if volume >= 100:
             return 0.0
-        return 20.0 * math.log10(volume / 100.0)
+        if volume <= 6:
+            return -28.125
+        return (volume - 6) / 94.0 * 28.125 - 28.125
 
     def _on_play_stop(self):
         """AirPlay 停止播放
@@ -154,7 +161,10 @@ class SpeakerAirPlay:
             pass
 
     def _start_poll(self):
-        """启动 AirPlay 状态轮询任务"""
+        """启动 AirPlay 状态轮询任务（仅在 auto_resume_on_interrupt 开启时）"""
+        # 未开启自动续播则不启动轮询，避免无意义的 API 调用
+        if self.config and not getattr(self.config, 'auto_resume_on_interrupt', False):
+            return
         if self._poll_task and not self._poll_task.done():
             return  # 已在运行
         self._poll_task = asyncio.create_task(self._poll_speaker_state())
@@ -226,22 +236,23 @@ class SpeakerAirPlay:
 
     def _on_volume_change(self, vol_db: float):
         """处理音量改变
-        
+
         注意: 这个回调从 RTSP 线程调用，不在 asyncio 事件循环中。
+
+        iOS 步骤 1-16 线性映射 dB → 音箱百分比:
+          步骤 0 (静音) → 0%
+          步骤 1 (-28.125 dB) → 6%
+          步骤 8 (-15.0 dB)  → 50%
+          步骤 16 (0 dB)     → 100%
         """
-        # AirPlay 音量范围: -144 (静音) 到 0 (最大)
         if vol_db <= -144:
             volume = 0
         elif vol_db >= 0:
             volume = 100
         else:
-            # 使用声压级对数映射 (10^(dB/20))，这更符合人耳听觉和 iOS 的滑动曲线
-            # 0dB -> 1.0 (100%)
-            # -20dB -> 0.1 (10%)
-            # -40dB -> 0.01 (1%)
-            volume = int(pow(10, vol_db / 20) * 100)
-            
-            # 确保即使在低分贝下也有基本的映射，避免由于 int() 导致的过早归零
+            # 线性映射: -28.125 dB ~ 0 dB → 6% ~ 100%
+            volume = int(6 + (vol_db + 28.125) / 28.125 * 94)
+            volume = max(0, min(100, volume))
             if volume == 0 and vol_db > -144:
                 volume = 1
 
