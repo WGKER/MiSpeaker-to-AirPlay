@@ -1016,7 +1016,7 @@
         </div>
 
         <div style="text-align: center; margin-top: 40px; color: var(--text-muted); font-size: 12px;">
-            miair:<span id="version-text">v0.8.5-alpha-arm64</span>
+            miair:<span id="version-text">BUILD_VERSION</span>
         </div>
     </div>
 
@@ -1087,9 +1087,9 @@
 
                 updateStatusBar(data);
 
-                if (data.version) {
-                    document.getElementById('version-text').textContent = 'V' + data.version;
-                }
+//                if (data.version) {
+//                    document.getElementById('version-text').textContent = 'v' + data.version;
+//                }
 
                 if (!initialLoaded) {
                     initialLoaded = true;
